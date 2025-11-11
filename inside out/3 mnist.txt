@@ -1,0 +1,152 @@
+Build the Image classification model by dividing the model into following 4 stages:
+a. Loading and preprocessing the image data
+b. Defining the model’s architecture
+c. Training the model
+d. Estimating the model’s performance
+
+dataset: MNIST
+
+
+
+
+
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import numpy as np
+from tensorflow.keras.datasets import mnist
+from tensorflow.keras import layers,models
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+
+
+
+
+
+train_data_dir = 'mnist-jpg/train'
+test_data_dir = 'mnist-jpg/test'
+
+train_datagen = ImageDataGenerator(rescale=1.0/255)
+test_datagen = ImageDataGenerator(rescale = 1.0/255)
+
+train_batch_size=10000
+train_generator = train_datagen.flow_from_directory(
+    train_data_dir,
+    target_size=(28,28),
+    batch_size = train_batch_size,
+    class_mode='categorical',
+    color_mode='grayscale',
+    shuffle = True,
+    classes=[str(i) for i in range(10)]
+)
+
+test_batch_size=2000
+test_generator = test_datagen.flow_from_directory(
+    test_data_dir,
+    target_size=(28,28),
+    batch_size = test_batch_size,
+    class_mode = 'categorical',
+    color_mode = 'grayscale',
+    shuffle = True,
+    classes=[str(i) for i in range(10)]
+)
+
+
+
+
+
+
+
+
+x_train,y_train = next(train_generator)
+x_test,y_test = next(test_generator)
+
+
+
+
+
+
+plt.imshow(x_train[0].reshape(28,28),cmap='gray')
+plt.title(f"Label: {np.argmax(y_train[0])}")
+plt.show()
+
+
+
+
+
+
+
+model = models.Sequential([
+    layers.Conv2D(32,(3,3),activation='relu',input_shape=(28,28,1)),
+    layers.MaxPooling2D((2,2)),
+    layers.Conv2D(64,(3,3), activation='relu'),
+    layers.MaxPooling2D((2,2)),
+    layers.Flatten(),
+    layers.Dense(128,activation='relu'),
+    layers.Dense(10,activation='softmax')
+])
+
+
+
+
+
+
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+
+
+
+history = model.fit(x_train,y_train,epochs=5,validation_data=(x_test,y_test))
+
+
+
+
+
+
+test_loss,test_acc = model.evaluate(x_test,y_test)
+print("Test Accuracy",test_acc)
+
+
+
+
+
+plt.plot(history.history['loss'],label='Train Loss')
+plt.plot(history.history['val_loss'],label='Validation loss')
+plt.title('Model Loss')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
+plt.show()
+
+
+
+
+
+
+predictions = model.predict(x_test)
+predicted_classes = np.argmax(predictions,axis=1)
+actual_classes = np.argmax(y_test,axis=1)
+
+
+
+
+
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+
+cm = confusion_matrix(actual_classes, predicted_classes)
+plt.figure(figsize=(8,6))
+sns.heatmap(cm,annot=True, fmt='d', cmap='Blues')
+plt.title('Confusion Matrix')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
+
+
+
+
+
+
+
+model.save('mnist_cnn_model.h5')
